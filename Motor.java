@@ -1,11 +1,17 @@
+/*Trabalho 2
+* Nome: Thomas Taichi Okubo 
+* RA: 148081
+*/
+
 import java.io.PrintWriter;
 import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.HashSet;
+import java.util.Optional;
 
-public class MotorRAxxxxxx extends Motor {
+public class MotorRA148081 extends Motor {
 
-	public MotorRAxxxxxx(Baralho deck1, Baralho deck2, ArrayList<Carta> mao1,
+	public MotorRA148081(Baralho deck1, Baralho deck2, ArrayList<Carta> mao1,
 			ArrayList<Carta> mao2, Jogador jogador1, Jogador jogador2,
 			int verbose, int tempoLimitado, PrintWriter saidaArquivo, EnumSet<Funcionalidade> funcionalidadesAtivas) {
 		super(deck1, deck2, mao1, mao2, jogador1, jogador2, verbose,
@@ -34,7 +40,10 @@ public class MotorRAxxxxxx extends Motor {
 	// "Memória" - Para marcar ações que só podem ser realizadas uma vez por turno.
 	private boolean poderHeroicoUsado;
 	private HashSet<Integer> lacaiosAtacaramID;
+	private HashSet<Integer> lacaiosGolpeDuplo;
 
+
+	
 	@Override
 	public int executarPartida() throws LamaException {
 		vidaHeroi1 = vidaHeroi2 = 30;
@@ -100,6 +109,7 @@ public class MotorRAxxxxxx extends Motor {
 			// Começa a processar jogadas do Jogador 1
 			this.poderHeroicoUsado = false;
             this.lacaiosAtacaramID = new HashSet<Integer>();
+            this.lacaiosGolpeDuplo = new HashSet<Integer>();
 			for(int i = 0; i < movimentos.size(); i++){
 				processarJogada (movimentos.get(i));
 			}
@@ -178,38 +188,352 @@ public class MotorRAxxxxxx extends Motor {
 	}
 
 	protected void processarJogada(Jogada umaJogada) throws LamaException {
+		CartaLacaio lacaioAlvo;
+		CartaLacaio lacaioAtacante;
+		Optional<CartaLacaio> lacaioProvocante;
+		int myMana = 0;
+		int myDmg = 0;
+		int urDmg = 0;
+		this.manaJogador1 = mesa.getManaJog1();
+		this.manaJogador2 = mesa.getManaJog2();
+
 		switch(umaJogada.getTipo()){
 		case ATAQUE:
-			// TODO: Um ataque foi realizado... quem atacou? quem foi atacado? qual o dano? o alvo morreu ou ficou com quanto de vida? Trate o caso do herói como alvo também.		
-			break;
-		case LACAIO:
-			int lacaioID = umaJogada.getCartaJogada().getID();
-			imprimir("JOGADA: O lacaio_id="+lacaioID+" foi baixado para a mesa.");
-			if(mao.contains(umaJogada.getCartaJogada())){
-				Carta lacaioBaixado = mao.get(mao.indexOf(umaJogada.getCartaJogada()));
-				lacaios.add(lacaioBaixado); // lacaio adicionado à mesa
-				mao.remove(umaJogada.getCartaJogada()); // lacaio retirado da mão
+		
+			// Verifica de o lacaio a atacar eh valido
+			if(!(lacaios.contains(umaJogada.getCartaJogada()))){
+				String erroMensagem = "Erro: Tentou-se atacar com o lacaio carta_id=" + umaJogada.getCartaJogada().getID() + " mas a carta eh invalida";
+				imprimir(erroMensagem);
+				throw new LamaException(5, umaJogada, erroMensagem, jogador==1?2:1);
 			}
-			else{
-				String erroMensagem = "Erro: Tentou-se usar a carta_id="+lacaioID+", porém esta carta não existe na mao. IDs de cartas na mao: ";
+			
+				
+			lacaioAtacante = (CartaLacaio) lacaios.get(lacaios.indexOf(umaJogada.getCartaJogada()));
+			
+			if(!funcionalidadesAtivas.contains(Funcionalidade.INVESTIDA)){
+				if(lacaioAtacante.getTurno()==this.turno && !(lacaioAtacante.getEfeito().equals(TipoEfeito.INVESTIDA))){
+					String erroMensagem = "Erro: Tentou-se atacar com o lacaio carta_id=" + umaJogada.getCartaJogada().getID() + " no turno em que foi baixado, mas ele não tem INVESTIDA";
+					imprimir(erroMensagem);
+					throw new LamaException(5, umaJogada, erroMensagem, jogador==1?2:1);
+					
+				}
+			}
+			
+			if(funcionalidadesAtivas.contains(Funcionalidade.ATAQUE_DUPLO)){
+				if(lacaiosAtacaramID.contains(lacaioAtacante.getID()) && !(lacaioAtacante.getEfeito().equals(TipoEfeito.ATAQUE_DUPLO))){
+					//erro
+					String erroMensagem = "Erro: Tentou-se atacar novamente com o lacaio carta_id=" + umaJogada.getCartaJogada().getID() + " com efeito" + lacaioAtacante.getEfeito()+ " mas a carta não tem GOLPE DUPLO";
+					imprimir(erroMensagem);
+					throw new LamaException(5, umaJogada, erroMensagem, jogador==1?2:1);
+
+				}
+				if(lacaiosAtacaramID.contains(lacaioAtacante.getID()) && lacaioAtacante.getEfeito().equals(TipoEfeito.ATAQUE_DUPLO)){
+					if(lacaiosGolpeDuplo.contains(lacaioAtacante.getID())){
+						String erroMensagem = "Erro: Tentou-se atacar pela terceira vez com o lacaio carta_id=" + umaJogada.getCartaJogada().getID() + ",com GOLPE DUPLO";
+						imprimir(erroMensagem);
+						throw new LamaException(5, umaJogada, erroMensagem, jogador==1?2:1);
+					}
+				}
+			} else {
+				if(lacaiosAtacaramID.contains(lacaioAtacante.getID())){
+					//erro
+					String erroMensagem = "Erro: Tentou-se atacar mais de uma vez com o lacaio carta_id=" + umaJogada.getCartaJogada().getID() ;
+					imprimir(erroMensagem);
+					throw new LamaException(5, umaJogada, erroMensagem, jogador==1?2:1);
+				}
+			}
+
+			
+			// Caso o alvo seja o Heroi oponente
+			if(umaJogada.getCartaAlvo() == null){
+				
+				// Caso PROVOCAR esteja ativo
+				if(funcionalidadesAtivas.contains(Funcionalidade.PROVOCAR)){
+					lacaioProvocante = lacaiosOponente.stream()
+							.map(c -> (CartaLacaio) c)
+							.filter(c -> c.getEfeito().equals(TipoEfeito.PROVOCAR))
+							.findFirst();
+
+					if(lacaioProvocante.isPresent()){
+						String erroMensagem = "Erro: O alvo Heroi"+ (jogador==1?2:1) + " nao eh um alvo valido, pois o lacaio carta_id=" + lacaioProvocante.get().getID() + " tem PROVOCAR";
+						imprimir(erroMensagem);
+						throw new LamaException(13, umaJogada, erroMensagem, jogador==1?2:1);		
+					} 
+				} 
+					
+				imprimir("JOGADA: O lacaio_id="+lacaioAtacante.getID()+" atacou o heroi" + (jogador==1?2:1) +  ".");
+				urDmg += lacaioAtacante.getAtaque();
+								
+			// Se o alvo for um lacaio
+			} else {
+	
+				try{
+					lacaioAlvo = (CartaLacaio) lacaiosOponente.get(lacaiosOponente.indexOf(umaJogada.getCartaAlvo()));
+					if(funcionalidadesAtivas.contains(Funcionalidade.PROVOCAR)){
+						lacaioProvocante = lacaiosOponente.stream()
+								.map(c -> (CartaLacaio) c)
+								.filter(c -> c.getEfeito().equals(TipoEfeito.PROVOCAR))
+								.findFirst();
+						
+	
+						if(lacaioProvocante.isPresent() && !lacaioAlvo.getEfeito().equals(TipoEfeito.PROVOCAR)){
+							String erroMensagem = "Erro: O lacaio carta_id="+lacaioAlvo.getID() +  " cujo efeito eh " + lacaioAlvo.getEfeito() +" não pode ser alvo, pois o lacaio+="+lacaioProvocante.get().getID() + " tem PROVOCAR";
+							imprimir(erroMensagem);
+							throw new LamaException(13, umaJogada, erroMensagem, jogador==1?2:1);
+						}
+						
+					}
+					
+					imprimir("JOGADA: O lacaio_id=" + lacaioAtacante.getID() + " ataca lacaio_id="+ lacaioAlvo.getID());
+					lacaioAtacante.setVidaAtual(lacaioAtacante.getVidaAtual() - lacaioAlvo.getAtaque());
+					lacaioAlvo.setVidaAtual(lacaioAlvo.getVidaAtual() - lacaioAtacante.getAtaque());
+					
+					if(lacaioAlvo.getVidaAtual() <= 0) {
+						imprimir("O lacaio do oponente carta_id="+lacaioAlvo.getID() + " morreu.");
+						lacaiosOponente.remove(lacaiosOponente.indexOf(lacaioAlvo));
+					}
+					
+					
+				} catch(IndexOutOfBoundsException ex){
+					String erroMensagem = "ErroX: Tentou-se atacar com o lacaio carta_id="+umaJogada.getCartaJogada().getID() + " mas o alvo carta_id="+umaJogada.getCartaAlvo().getID() +" não eh valido";
+					erroMensagem+=lacaiosOponente.size();
+					for(Carta card : lacaiosOponente){
+						erroMensagem += card.getID() + ", ";
+					}
+					imprimir(erroMensagem);
+					throw new LamaException(8, umaJogada, erroMensagem, jogador==1?2:1);
+					
+				}
+			}
+			
+			if(lacaioAtacante.getVidaAtual() <= 0) {
+				imprimir("Meu lacaio carta_id="+lacaioAtacante.getID() + " morreu.");
+				lacaios.remove(lacaios.indexOf(lacaioAtacante));
+			} else {
+				if(funcionalidadesAtivas.contains(Funcionalidade.ATAQUE_DUPLO)){
+					if(lacaiosAtacaramID.contains(lacaioAtacante.getID())){
+						lacaiosGolpeDuplo.add(lacaioAtacante.getID());
+					} else {
+						lacaiosAtacaramID.add(lacaioAtacante.getID());
+					}
+				} else {
+					lacaiosAtacaramID.add(lacaioAtacante.getID());
+				}		
+			}
+		
+			
+			imprimir("FINAL FASE ATAQUE");
+			imprimir("MEUS LACAIO: " + lacaios.size());
+			imprimir("SEUS LACAIOS: "+ lacaiosOponente.size());
+			
+			
+			break;
+			
+		case LACAIO:
+	
+			int lacaioID = umaJogada.getCartaJogada().getID();	
+			// Verifica se o jogador possue a carta a ser jogada
+			if(!mao.contains(umaJogada.getCartaJogada())){
+				String erroMensagem = "ErroZ: Tentou-se usar a carta_id="+lacaioID+", porem esta carta nao existe na mao. IDs de cartas na mao: ";
 				for(Carta card : mao){
 					erroMensagem += card.getID() + ", ";
 				}
 				imprimir(erroMensagem);
-				// Dispara uma LamaException passando o código do erro, uma mensagem descritiva correspondente e qual jogador deve vencer a partida.
 				throw new LamaException(1, umaJogada, erroMensagem, jogador==1?2:1);
 			}
-			// Obs: repare que este código funcionará tanto quando trata-se do turno do jogador1 ou do jogador2.
+			
+			if(!(umaJogada.getCartaJogada() instanceof CartaLacaio)) {
+				String erroMensagem = "Erro: Tentou-se usar a carta_id="+lacaioID+", porem esta carta nao pertence a classe CartaLacaio";
+				imprimir(erroMensagem);
+				throw new LamaException(3, umaJogada, erroMensagem, jogador==1?2:1);
+			}
+			
+			// Verifica se o jogador tem mana suficiente para baixar a carta
+			if(umaJogada.getCartaJogada().getMana() > (jogador==1?this.manaJogador1:this.manaJogador2)){
+				String erroMensagem = "Erro: Tentou-se usar a carta_id="+umaJogada.getCartaJogada().getID()+", porem eh preciso ter " + umaJogada.getCartaJogada().getMana()+" mas ha " + (jogador==1?this.manaJogador1:this.manaJogador2 +" de mana disponivel") ;
+				imprimir(erroMensagem);
+				throw new LamaException(2, umaJogada, erroMensagem, jogador==1?2:1);
+			}
+			
+			// Verifica se o jogador nao atingiu o numero maximo de lacaios em campo
+			if(lacaios.size() >= 7) {
+				String erroMensagem = "Erro: Tentou-se usar a carta_id="+lacaioID+","+ umaJogada.getCartaJogada().getID() + ",porem ja ha sete lacaios em campo";
+				imprimir(erroMensagem);
+				throw new LamaException(4, umaJogada, erroMensagem, jogador==1?2:1);
+			}
+			
+			imprimir("JOGADA: O lacaio carta_id="+lacaioID+" foi baixado para a mesa.");
+			Carta lacaioBaixado = mao.get(mao.indexOf(umaJogada.getCartaJogada()));
+			lacaios.add(lacaioBaixado); // lacaio adicionado a mesa
+			mao.remove(mao.get(mao.indexOf(umaJogada.getCartaJogada()))); // lacaio retirado da mao
+			myMana += lacaioBaixado.getMana();
 			break;
+			
 		case MAGIA:
-			// TODO: Uma magia foi usada... é de área, alvo ou buff? Se de alvo ou buff, qual o lacaio receberá o dano/buff ?
+			// Verifica se a carta esta em mao
+			if(!mao.contains(umaJogada.getCartaJogada())){
+				String erroMensagem = "Erro: Tentou-se baixar a carta_id="+umaJogada.getCartaJogada().getID()+", mas ela nao esta presente na mao";
+				for(Carta card : mao){
+					erroMensagem += card.getID() + ", ";
+				}
+				imprimir(erroMensagem);
+				throw new LamaException(1, umaJogada, erroMensagem, jogador==1?2:1);
+			}
+			
+			// Verifica se o jogador tem mana suficiente para baixar a carta
+			if(umaJogada.getCartaJogada().getMana() > (jogador==1?this.manaJogador1:this.manaJogador2)){
+				String erroMensagem = "Erro: Tentou-se baixar a carta_id="+umaJogada.getCartaJogada().getID()+ ", de custo de mana igual a " + umaJogada.getCartaJogada().getMana()+", mas hÃ¡ " + (jogador==1?mesa.getManaJog1():mesa.getManaJog2()+" de mana");					
+				imprimir(erroMensagem);
+				throw new LamaException(2, umaJogada, erroMensagem, jogador==1?2:1);
+			}
+			// Verifica se a carta e de fato do tipo magia
+			if(!(umaJogada.getCartaJogada() instanceof CartaMagia)) {
+				String erroMensagem = "Erro: Tentou-se baixar a carta_id="+umaJogada.getCartaJogada().getID()+ ", mas ela nao eh magia";					
+				imprimir(erroMensagem);
+				throw new LamaException(9, umaJogada, erroMensagem, jogador==1?2:1);
+			}
+			try {
+				
+				//CartaMagia magia = (CartaMagia) umaJogada.getCartaJogada();
+				CartaMagia magia = (CartaMagia) mao.get(mao.indexOf(umaJogada.getCartaJogada()));
+				switch(magia.getMagiaTipo()){
+				case ALVO:
+					// Dano direto a um heroi
+					if(umaJogada.getCartaAlvo() == null){
+						imprimir("JOGADA: A magia carta_id="+magia.getID() +" causa " +magia.getMagiaDano()+ " de dano ao Heroi"+(jogador==1?2:1));
+						urDmg += magia.getMagiaDano();
+						myMana += magia.getMana();
+					
+					// Dano por magia a um lacaio do oponente
+					} else {
+						// Verifica se o lacaio alvo e valido
+						if(lacaiosOponente.contains(umaJogada.getCartaAlvo())){
+							imprimir("JOGADA: A magia_id="+magia.getID()+" causa "+ magia.getMagiaDano()+" no lacaio_id="+umaJogada.getCartaAlvo()+" do oponente");
+							lacaioAlvo = (CartaLacaio)lacaiosOponente.get(lacaiosOponente.indexOf(umaJogada.getCartaAlvo()));
+							lacaioAlvo.setVidaAtual(lacaioAlvo.getVidaAtual()-magia.getMagiaDano());
+							if(lacaioAlvo.getVidaAtual()<=0) {
+								imprimir("O lacaio do oponente carta_id=" + lacaioAlvo.getID() + " morreu");
+								lacaiosOponente.remove(lacaioAlvo);
+							}
+							myMana += magia.getMana();
+							
+						} else {
+							String erroMensagem = "Erro: Tentou-se usar a carta_id="+umaJogada.getCartaJogada().getID()+", mas a carta_id=" + umaJogada.getCartaAlvo().getID() +" nao e um alvo valido";					
+							imprimir(erroMensagem);
+							throw new LamaException(10, umaJogada, erroMensagem, jogador==1?2:1);
+						}
+					}
+					break;
+				
+				case AREA:
+					imprimir("JOGADA: A magia de dano em area carta_id=" +magia.getID() + ", dano de " + magia.getMagiaDano()+" em todos os lacaios do oponente e ao Heroi"+(jogador==1?2:1));
+					lacaiosOponente.stream()
+						.map(carta -> (CartaLacaio) carta)
+						.forEach(carta->{
+							carta.setVidaAtual(carta.getVidaAtual()-magia.getMagiaDano());
+						});
+					
+					for(int i=0;i<lacaiosOponente.size();i++){
+						CartaLacaio lac = (CartaLacaio) lacaiosOponente.get(i);
+						if(lac.getVidaAtual() <= 0){
+							imprimir("O lacaio do oponente carta_id=" + lac.getID() + " morreu.");
+							lacaiosOponente.remove(lac);
+							i--;
+						}
+					
+					}
+					
+					urDmg += magia.getMagiaDano();
+					myMana += magia.getMana();
+					break;
+					
+				case BUFF:
+					// Verifica se o lacaio alvo esta em campo
+					if(lacaios.contains(umaJogada.getCartaAlvo())){
+						imprimir("JOGADA: O lacaio_id="+umaJogada.getCartaAlvo()+" recebeu " + magia.getMagiaDano() +" de ataque e de vida.");
+						lacaioAlvo = (CartaLacaio) umaJogada.getCartaAlvo();
+						lacaioAlvo.setAtaque(lacaioAlvo.getAtaque()+magia.getMagiaDano());
+						lacaioAlvo.setVidaAtual(lacaioAlvo.getVidaAtual()+magia.getMagiaDano());
+						lacaioAlvo.setVidaMaxima(lacaioAlvo.getVidaMaxima()+magia.getMagiaDano());
+						myMana += magia.getMana();
+						
+					} else {
+						String erroMensagem = "Erro: Tentou-se baixar a carta_id="+umaJogada.getCartaJogada().getID()+", mas a carta_id=" + umaJogada.getCartaAlvo().getID() +" nao e um alvo valido";					
+						imprimir(erroMensagem);
+						throw new LamaException(10, umaJogada, erroMensagem, jogador==1?2:1);
+					}
+					break;
+				}
+				
+			} catch (IndexOutOfBoundsException ex) {
+				String erroMensagem = "Erro: Tentou-se baixar a carta_id="+umaJogada.getCartaJogada().getID()+", mas ela eh invalida";					
+				imprimir(erroMensagem);
+				throw new LamaException(10, umaJogada, erroMensagem, jogador==1?2:1);
+			}
+			
 			break;
+			
 		case PODER:
-			// TODO: O poder heroico foi usado. Qual o alvo ?
+			
+			// Verifica se ha mana suficiente para usar o poder do heroi 
+			if((jogador==1?this.manaJogador1:this.manaJogador2) < 2 ){
+				String erroMensagem = "Erro: Tentou-se usar o PODER do Heroi"+jogador+", porém é preciso 2 de mana, e há "+(jogador==1?mesa.getManaJog1():mesa.getManaJog2())+" de mana";
+				imprimir(erroMensagem);
+				// Dispara uma LamaException passando o código do erro, uma mensagem descritiva correspondente e qual jogador deve vencer a partida.
+				throw new LamaException(2, umaJogada, erroMensagem, jogador==1?2:1);
+			}
+			
+			// Verifica se o poder do heroi ja foi usado
+			if(poderHeroicoUsado){
+				String erroMensagem = "Erro: Não é possível usar o PODER do Heroi"+jogador+" no alvo carta_id="+umaJogada.getCartaAlvo()+ ", pois já o poder do heói já foi usado.";
+				imprimir(erroMensagem);
+				throw new LamaException(2, umaJogada, erroMensagem, jogador==1?2:1);
+			}
+			
+			// Uso do poder do heroi diretamente no heroi oponente
+			if(umaJogada.getCartaAlvo() == null){
+				urDmg += 1;
+			// uso do poder do heroi em lacaio do oponente
+			} else {
+				// Verifica se o lacaio alvo e valido
+				if(!(lacaiosOponente.contains(umaJogada.getCartaAlvo()))) {
+					String erroMensagem = "Erro: Não é possível usar o PODER do Heroi"+jogador+" no alvo carta_id="+umaJogada.getCartaAlvo()+ ", pois o alvo é inválido.";
+					imprimir(erroMensagem);
+					throw new LamaException(2, umaJogada, erroMensagem, jogador==1?2:1);
+
+				}
+				
+				imprimir("JOGADA: O Heroi"+ jogador + " usou o poder do heroi.");
+				lacaioAlvo = (CartaLacaio) lacaiosOponente.get(lacaiosOponente.indexOf(umaJogada.getCartaAlvo()));
+				
+				myDmg += lacaioAlvo.getAtaque();
+				lacaioAlvo.setVidaAtual(lacaioAlvo.getVidaAtual()-1);
+				if(lacaioAlvo.getVidaAtual()<=0)
+					lacaiosOponente.remove(lacaiosOponente.indexOf(lacaioAlvo));
+					
+			}
+			
+			poderHeroicoUsado=true;
+			myMana += 2;
 			break;
+			
+			
 		default:
 			break;
 		}
+		
+		
+		if(jogador == 1){
+			this.vidaHeroi1 -= myDmg;
+			this.manaJogador1 -= myMana;
+			this.vidaHeroi2 -= urDmg;
+		} else {
+			this.vidaHeroi2 -= myDmg;
+			this.manaJogador2 -= myMana;
+			this.vidaHeroi1 -= urDmg;
+		}
+		
+		
 		return;
 	}
 	
@@ -230,6 +554,5 @@ public class MotorRAxxxxxx extends Motor {
 			nCartasHeroi2++;
 			return (Carta) UnoptimizedDeepCopy.copy(nova);
 		}
-	}
-
+	}	
 }
