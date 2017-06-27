@@ -274,9 +274,10 @@ public class MotorRA148081 extends Motor {
 								.map(c -> (CartaLacaio) c)
 								.filter(c -> c.getEfeito().equals(TipoEfeito.PROVOCAR))
 								.findFirst();
-						
 	
-						if(lacaioProvocante.isPresent() && lacaioAlvo.getEfeito().equals(TipoEfeito.PROVOCAR)){
+
+						if(lacaioProvocante.isPresent() && !lacaioAlvo.getEfeito().equals(TipoEfeito.PROVOCAR)){
+
 							String erroMensagem = "Erro: O lacaio carta_id="+lacaioAlvo.getID() +  " cujo efeito eh " + lacaioAlvo.getEfeito() +" não pode ser alvo, pois o lacaio+="+lacaioProvocante.get().getID() + " tem PROVOCAR";
 							imprimir(erroMensagem);
 							throw new LamaException(13, umaJogada, erroMensagem, jogador==1?2:1);
@@ -288,19 +289,30 @@ public class MotorRA148081 extends Motor {
 					lacaioAtacante.setVidaAtual(lacaioAtacante.getVidaAtual() - lacaioAlvo.getAtaque());
 					lacaioAlvo.setVidaAtual(lacaioAlvo.getVidaAtual() - lacaioAtacante.getAtaque());
 					
-					if(lacaioAlvo.getVidaAtual() <= 0) lacaiosOponente.remove(lacaiosOponente.indexOf(lacaioAlvo));
+
+					if(lacaioAlvo.getVidaAtual() <= 0) {
+						imprimir("O lacaio do oponente carta_id="+lacaioAlvo.getID() + " morreu.");
+						lacaiosOponente.remove(lacaiosOponente.indexOf(lacaioAlvo));
+					}
+
 					
 					
 				} catch(IndexOutOfBoundsException ex){
 					String erroMensagem = "ErroX: Tentou-se atacar com o lacaio carta_id="+umaJogada.getCartaJogada().getID() + " mas o alvo carta_id="+umaJogada.getCartaAlvo().getID() +" não eh valido";
+					for(Carta card : lacaiosOponente){
+						erroMensagem += card.getID() + ", ";
+					}
+
 					imprimir(erroMensagem);
 					throw new LamaException(8, umaJogada, erroMensagem, jogador==1?2:1);
 					
 				}
 			}
 			
-			if(lacaioAtacante.getVidaAtual() <= 0) lacaios.remove(lacaios.indexOf(lacaioAtacante));
-			else {
+			if(lacaioAtacante.getVidaAtual() <= 0) {
+				imprimir("Meu lacaio carta_id="+lacaioAtacante.getID() + " morreu.");
+				lacaios.remove(lacaios.indexOf(lacaioAtacante));
+			} else {
 				if(funcionalidadesAtivas.contains(Funcionalidade.ATAQUE_DUPLO)){
 					if(lacaiosAtacaramID.contains(lacaioAtacante.getID())){
 						lacaiosGolpeDuplo.add(lacaioAtacante.getID());
@@ -310,12 +322,7 @@ public class MotorRA148081 extends Motor {
 				} else {
 					lacaiosAtacaramID.add(lacaioAtacante.getID());
 				}		
-			}
-		
-			
-			
-			
-			
+      }	
 			break;
 			
 		case LACAIO:
@@ -400,7 +407,12 @@ public class MotorRA148081 extends Motor {
 							imprimir("JOGADA: A magia_id="+magia.getID()+" causa "+ magia.getMagiaDano()+" no lacaio_id="+umaJogada.getCartaAlvo()+" do oponente");
 							lacaioAlvo = (CartaLacaio)lacaiosOponente.get(lacaiosOponente.indexOf(umaJogada.getCartaAlvo()));
 							lacaioAlvo.setVidaAtual(lacaioAlvo.getVidaAtual()-magia.getMagiaDano());
-							if(lacaioAlvo.getVidaAtual()<=0) lacaiosOponente.remove(lacaioAlvo);
+
+							if(lacaioAlvo.getVidaAtual()<=0) {
+								imprimir("O lacaio do oponente carta_id=" + lacaioAlvo.getID() + " morreu");
+								lacaiosOponente.remove(lacaioAlvo);
+							}
+
 							myMana += magia.getMana();
 							
 						} else {
@@ -422,6 +434,9 @@ public class MotorRA148081 extends Motor {
 					for(int i=0;i<lacaiosOponente.size();i++){
 						CartaLacaio lac = (CartaLacaio) lacaiosOponente.get(i);
 						if(lac.getVidaAtual() <= 0){
+
+							imprimir("O lacaio do oponente carta_id=" + lac.getID() + " morreu.");
+
 							lacaiosOponente.remove(lac);
 							i--;
 						}
@@ -451,10 +466,14 @@ public class MotorRA148081 extends Motor {
 				}
 				
 			} catch (IndexOutOfBoundsException ex) {
-				
+				String erroMensagem = "Erro: Tentou-se baixar a carta_id="+umaJogada.getCartaJogada().getID()+", mas ela eh invalida";					
+				imprimir(erroMensagem);
+				throw new LamaException(10, umaJogada, erroMensagem, jogador==1?2:1);
+
 			}
 			
 			break;
+			
 		case PODER:
 			
 			// Verifica se ha mana suficiente para usar o poder do heroi 
@@ -486,7 +505,7 @@ public class MotorRA148081 extends Motor {
 				}
 				
 				imprimir("JOGADA: O Heroi"+ jogador + " usou o poder do heroi.");
-				lacaioAlvo = (CartaLacaio) umaJogada.getCartaAlvo();
+				lacaioAlvo = (CartaLacaio) lacaiosOponente.get(lacaiosOponente.indexOf(umaJogada.getCartaAlvo()));
 				
 				myDmg += lacaioAlvo.getAtaque();
 				lacaioAlvo.setVidaAtual(lacaioAlvo.getVidaAtual()-1);
