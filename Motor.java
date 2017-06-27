@@ -92,7 +92,7 @@ public class MotorRA148081 extends Motor {
 				vidaHeroi1 -= noCardDmgCounter1++;
 				if( vidaHeroi1 <= 0){
 					// Jogador 2 venceu
-					imprimir("O jogador 2 venceu porque o jogador 1 recebeu um dano mortal por falta de cartas ! (Dano : " +(noCardDmgCounter1-1)+ ", Vida Herói 1: "+vidaHeroi1+")");
+					imprimir("O jogador 2 venceu porque o jogador 1 recebeu um dano mortal por falta de cartas ! (Dano : " +(noCardDmgCounter1-1)+ ", Vida Herï¿½i 1: "+vidaHeroi1+")");
 					return 2;
 				}
 				movimentos = jogador1.processarTurno(mesa, null, cloneMovimentos1);
@@ -155,7 +155,7 @@ public class MotorRA148081 extends Motor {
 				vidaHeroi2 -= noCardDmgCounter2++;
 				if( vidaHeroi2 <= 0){
 					// Vitoria do jogador 1
-					imprimir("O jogador 1 venceu porque o jogador 2 recebeu um dano mortal por falta de cartas ! (Dano : " +(noCardDmgCounter2-1)+ ", Vida Herói 2: "+vidaHeroi2 +")");
+					imprimir("O jogador 1 venceu porque o jogador 2 recebeu um dano mortal por falta de cartas ! (Dano : " +(noCardDmgCounter2-1)+ ", Vida Herï¿½i 2: "+vidaHeroi2 +")");
 					return 1;
 				}
 				movimentos = jogador2.processarTurno(mesa, null, cloneMovimentos2);
@@ -274,9 +274,10 @@ public class MotorRA148081 extends Motor {
 								.map(c -> (CartaLacaio) c)
 								.filter(c -> c.getEfeito().equals(TipoEfeito.PROVOCAR))
 								.findFirst();
-						
 	
+
 						if(lacaioProvocante.isPresent() && !lacaioAlvo.getEfeito().equals(TipoEfeito.PROVOCAR)){
+
 							String erroMensagem = "Erro: O lacaio carta_id="+lacaioAlvo.getID() +  " cujo efeito eh " + lacaioAlvo.getEfeito() +" não pode ser alvo, pois o lacaio+="+lacaioProvocante.get().getID() + " tem PROVOCAR";
 							imprimir(erroMensagem);
 							throw new LamaException(13, umaJogada, erroMensagem, jogador==1?2:1);
@@ -288,18 +289,20 @@ public class MotorRA148081 extends Motor {
 					lacaioAtacante.setVidaAtual(lacaioAtacante.getVidaAtual() - lacaioAlvo.getAtaque());
 					lacaioAlvo.setVidaAtual(lacaioAlvo.getVidaAtual() - lacaioAtacante.getAtaque());
 					
+
 					if(lacaioAlvo.getVidaAtual() <= 0) {
 						imprimir("O lacaio do oponente carta_id="+lacaioAlvo.getID() + " morreu.");
 						lacaiosOponente.remove(lacaiosOponente.indexOf(lacaioAlvo));
 					}
+
 					
 					
 				} catch(IndexOutOfBoundsException ex){
 					String erroMensagem = "ErroX: Tentou-se atacar com o lacaio carta_id="+umaJogada.getCartaJogada().getID() + " mas o alvo carta_id="+umaJogada.getCartaAlvo().getID() +" não eh valido";
-					erroMensagem+=lacaiosOponente.size();
 					for(Carta card : lacaiosOponente){
 						erroMensagem += card.getID() + ", ";
 					}
+
 					imprimir(erroMensagem);
 					throw new LamaException(8, umaJogada, erroMensagem, jogador==1?2:1);
 					
@@ -319,14 +322,7 @@ public class MotorRA148081 extends Motor {
 				} else {
 					lacaiosAtacaramID.add(lacaioAtacante.getID());
 				}		
-			}
-		
-			
-			imprimir("FINAL FASE ATAQUE");
-			imprimir("MEUS LACAIO: " + lacaios.size());
-			imprimir("SEUS LACAIOS: "+ lacaiosOponente.size());
-			
-			
+      }	
 			break;
 			
 		case LACAIO:
@@ -411,10 +407,12 @@ public class MotorRA148081 extends Motor {
 							imprimir("JOGADA: A magia_id="+magia.getID()+" causa "+ magia.getMagiaDano()+" no lacaio_id="+umaJogada.getCartaAlvo()+" do oponente");
 							lacaioAlvo = (CartaLacaio)lacaiosOponente.get(lacaiosOponente.indexOf(umaJogada.getCartaAlvo()));
 							lacaioAlvo.setVidaAtual(lacaioAlvo.getVidaAtual()-magia.getMagiaDano());
+
 							if(lacaioAlvo.getVidaAtual()<=0) {
 								imprimir("O lacaio do oponente carta_id=" + lacaioAlvo.getID() + " morreu");
 								lacaiosOponente.remove(lacaioAlvo);
 							}
+
 							myMana += magia.getMana();
 							
 						} else {
@@ -436,7 +434,9 @@ public class MotorRA148081 extends Motor {
 					for(int i=0;i<lacaiosOponente.size();i++){
 						CartaLacaio lac = (CartaLacaio) lacaiosOponente.get(i);
 						if(lac.getVidaAtual() <= 0){
+
 							imprimir("O lacaio do oponente carta_id=" + lac.getID() + " morreu.");
+
 							lacaiosOponente.remove(lac);
 							i--;
 						}
@@ -469,6 +469,7 @@ public class MotorRA148081 extends Motor {
 				String erroMensagem = "Erro: Tentou-se baixar a carta_id="+umaJogada.getCartaJogada().getID()+", mas ela eh invalida";					
 				imprimir(erroMensagem);
 				throw new LamaException(10, umaJogada, erroMensagem, jogador==1?2:1);
+
 			}
 			
 			break;
